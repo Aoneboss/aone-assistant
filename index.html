@@ -39,7 +39,20 @@ function talk() {
     let userText = event.results[0][0].transcript;
     document.getElementById("response").innerHTML = "You said: " + userText;
 
-    let speech = new SpeechSynthesisUtterance("You said " + userText);
+    // Stylish replies with Sir/Boss vibe
+    let replies = [
+      "Yes Boss, you said " + userText,
+      "At your service Sir. You said " + userText,
+      "Command me, Boss. You said " + userText,
+      "Ready when you are, Sir. You said " + userText,
+      "What's the order, Boss? You said " + userText
+    ];
+
+    // Pick a random reply each time
+    let randomReply = replies[Math.floor(Math.random() * replies.length)];
+
+    // Speak out loud
+    let speech = new SpeechSynthesisUtterance(randomReply);
     speechSynthesis.speak(speech);
   }
 }
