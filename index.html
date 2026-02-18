@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Aone AI Assistant</title>
+<title>Aone AI Assistant 2.0</title>
 <style>
 body {
   font-family: Arial;
@@ -10,52 +10,149 @@ body {
   text-align: center;
   padding: 50px;
 }
+h1 {
+  font-size: 32px;
+  color: cyan;
+  text-shadow: 0 0 10px #00ffff;
+}
 button {
   padding: 15px 30px;
   font-size: 18px;
   background: cyan;
   border: none;
+  border-radius: 10px;
   cursor: pointer;
+  box-shadow: 0 0 20px cyan;
+  transition: 0.3s;
+}
+button:hover {
+  background: #00bfff;
+  box-shadow: 0 0 30px #00ffff;
 }
 #response {
   margin-top: 20px;
   font-size: 20px;
+  color: #00ffff;
+  text-shadow: 0 0 5px #00ffff;
 }
 </style>
 </head>
 <body>
 
 <h1>🤖 Aone AI Assistant</h1>
-<button onclick="talk()">Talk to Aone</button>
-
+<p>Say <strong>“Hey Aone”</strong> to activate</p>
 <div id="response"></div>
 
 <script>
-function talk() {
+let memory = JSON.parse(localStorage.getItem('aoneMemory') || '[]');
+
+function saveMemory(text) {
+  memory.push({text: text, date: new Date().toISOString()});
+  // Keep last 15 days only
+  let cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 15);
+  memory = memory.filter(m => new Date(m.date) > cutoff);
+  localStorage.setItem('aoneMemory', JSON.stringify(memory));
+}
+
+function getVoice() {
+  let voices = speechSynthesis.getVoices();
+  return voices.find(v => v.lang.includes('en') && v.name.toLowerCase().includes('male')) || voices[0];
+}
+
+function speak(text) {
+  let speech = new SpeechSynthesisUtterance(text);
+  speech.voice = getVoice();
+  speech.rate = 0.9;
+  speech.pitch = 1.0;
+  speechSynthesis.speak(speech);
+}
+
+function activateAone() {
   let recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
   recognition.start();
 
   recognition.onresult = function(event) {
     let userText = event.results[0][0].transcript;
     document.getElementById("response").innerHTML = "You said: " + userText;
+    saveMemory(userText);
 
-    // Stylish replies with Sir/Boss vibe
-    let replies = [
-      "Yes Boss, you said " + userText,
-      "At your service Sir. You said " + userText,
-      "Command me, Boss. You said " + userText,
-      "Ready when you are, Sir. You said " + userText,
-      "What's the order, Boss? You said " + userText
-    ];
+    // Commands
+    let lower = userText.toLowerCase();
+    let handled = false;
 
-    // Pick a random reply each time
-    let randomReply = replies[Math.floor(Math.random() * replies.length)];
+    // App Commands (Android intents)
+    if(lower.includes("open youtube")) {
+      handled = true;
+      speak("Opening YouTube, Boss 😎");
+      window.location.href = "intent://www.youtube.com/#Intent;package=com.google.android.youtube;scheme=https;end";
+    }
+    else if(lower.includes("open instagram")) {
+      handled = true;
+      speak("Opening Instagram, Boss 😎");
+      window.location.href = "intent://instagram.com/_u/username#Intent;package=com.instagram.android;scheme=https;end";
+    }
+    else if(lower.includes("open whatsapp")) {
+      handled = true;
+      speak("Opening WhatsApp, Boss 😎");
+      window.location.href = "intent://send/#Intent;package=com.whatsapp;scheme=https;end";
+    }
+    // Utility Commands
+    else if(lower.includes("time")) {
+      handled = true;
+      let now = new Date();
+      let timeStr = now.toLocaleTimeString();
+      speak("Current time is " + timeStr + ", Boss 😎");
+    }
+    else if(lower.includes("date")) {
+      handled = true;
+      let now = new Date();
+      let dateStr = now.toDateString();
+      speak("Today's date is " + dateStr + ", Boss 😎");
+    }
+    else if(lower.includes("hello")) {
+      handled = true;
+      let replies = [
+        "Yes Boss, you said hello 😎",
+        "At your service Sir, hello 😎",
+        "Command me, Boss, hello 😎",
+        "Ready when you are, Sir 😎",
+        "What's the order, Boss? Hello 😎"
+      ];
+      speak(replies[Math.floor(Math.random()*replies.length)]);
+    }
+    else if(lower.includes("goodbye") || lower.includes("stop")) {
+      handled = true;
+      speak("See you later Boss 👋");
+    }
 
-    // Speak out loud
-    let speech = new SpeechSynthesisUtterance(randomReply);
-    speechSynthesis.speak(speech);
+    if(!handled) {
+      // Default vibe reply
+      let replies = [
+        "Yes Boss, you said " + userText + " 😎",
+        "At your service Sir. You said " + userText + " 😎",
+        "Command me, Boss. You said " + userText + " 😎",
+        "Ready when you are, Sir. You said " + userText + " 😎",
+        "What's the order, Boss? You said " + userText + " 😎"
+      ];
+      speak(replies[Math.floor(Math.random()*replies.length)]);
+    }
   }
 }
+
+// Auto wake word listener
+let wakeRecognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+wakeRecognition.continuous = true;
+wakeRecognition.interimResults = false;
+wakeRecognition.onresult = function(event) {
+  let transcript = event.results[event.results.length-1][0].transcript.toLowerCase();
+  if(transcript.includes("hey aone")) {
+    document.getElementById("response").innerHTML = "🟢 Hey Aone activated!";
+    speak("Yes Boss, I am ready 😎");
+    activateAone();
+  }
+};
+wakeRecognition.start();
 </script>
 
 </body>
